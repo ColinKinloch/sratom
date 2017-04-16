@@ -25,6 +25,8 @@ def options(opt):
                    help="Build static library")
     opt.add_option('--no-shared', action='store_true', dest='no_shared',
                    help='Do not build shared library')
+    opt.add_option('--android', action='store_true', dest='android',
+                   help='Build for android')
 
 def configure(conf):
     conf.load('compiler_c')
@@ -34,6 +36,7 @@ def configure(conf):
 
     conf.env.BUILD_SHARED = not Options.options.no_shared
     conf.env.BUILD_STATIC = Options.options.static
+    conf.env.ANDROID      = Options.options.android
 
     if not conf.env.BUILD_SHARED and not conf.env.BUILD_STATIC:
         conf.fatal('Neither a shared nor a static build requested')
@@ -67,6 +70,15 @@ def build(bld):
     libflags = ['-fvisibility=hidden']
     libs     = ['m']
     defines  = []
+    includes = ['.', './src']
+    ldflags  = []
+    libpath  = []
+
+    if bld.env.ANDROID:
+        includes += [bld.env.PREFIX + '/include/']
+        ldflags  += ['--sysroot=' + bld.env.PREFIX + '/..']
+        libpath  += [bld.env.PREFIX + '/lib/']
+
     if bld.env.MSVC_COMPILER:
         libflags = []
         libs     = []
@@ -77,8 +89,10 @@ def build(bld):
         obj = bld(features        = 'c cshlib',
                   export_includes = ['.'],
                   source          = lib_source,
-                  includes        = ['.', './src'],
+                  includes        = includes,
                   lib             = libs,
+                  libpath         = libpath,
+                  ldflags         = ldflags,
                   name            = 'libsratom',
                   target          = 'sratom-%s' % SRATOM_MAJOR_VERSION,
                   vnum            = SRATOM_VERSION,
@@ -92,8 +106,10 @@ def build(bld):
         obj = bld(features        = 'c cstlib',
                   export_includes = ['.'],
                   source          = lib_source,
-                  includes        = ['.', './src'],
+                  includes        = includes,
                   lib             = libs,
+                  libpath         = libpath,
+                  ldflags         = ldflags,
                   name            = 'libsratom_static',
                   target          = 'sratom-%s' % SRATOM_MAJOR_VERSION,
                   vnum            = SRATOM_VERSION,
